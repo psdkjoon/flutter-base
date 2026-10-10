@@ -18,6 +18,7 @@ This README is also the guide to how I build apps. Follow it and any app of mine
 - [Notifications](#notifications)
 - [Quick-settings tile](#quick-settings-tile)
 - [Release and CI](#release-and-ci)
+- [Bundling a prebuilt binary](#bundling-a-prebuilt-binary)
 - [Checklist for a new app](#checklist-for-a-new-app)
 
 ## Install and use
@@ -315,7 +316,7 @@ Rules for the toggle function: it must be safe to call while busy, and it must s
 `.github/workflows/release.yml` runs on every push to `main` and on pull requests.
 
 1. `check`: `VERSION`, `pubspec.yaml` and `app_info.dart` match, then `flutter pub get` and `flutter analyze`, and `flutter test` if `test/` exists.
-2. `android`: universal and split-per-ABI APKs. With the signing secrets set, `scripts/strip.sh` strips, aligns and signs them as `<Name>-<abi>.apk` and `scripts/verify-apk.sh` checks the native libraries.
+2. `android`: universal and split-per-ABI APKs. With the signing secrets set, `scripts/strip.sh` strips, aligns and signs them as `<Name>-<abi>.apk` and `scripts/verify-apk.sh` checks the native libraries. Each per-ABI APK keeps only the libraries of its own ABI, which keeps the split APKs small. `verify-apk.sh` requires the v2 and v3 signatures and only warns when the legacy v1 signature is missing.
 3. `linux`: x86_64 and aarch64 builds, packaged as AppImages by `scripts/appimage.sh`. The AppImage installs its own menu entry on first launch.
 4. `windows`: builds the release folder, bundles the Visual C++ runtime, wraps it in an installer with [Inno Setup](https://jrsoftware.org/isinfo.php), then silently installs it, checks the files, starts the app for a few seconds and uninstalls it. The installer is the only Windows file published.
 5. `release` (only on `main`): tags `v<VERSION>` and publishes everything to GitHub Releases.
@@ -340,6 +341,26 @@ The installer needs no administrator rights by default (per-user install in `%Lo
 To build it locally on Windows: `iscc /DAppName=MyApp /DAppExe=my_app.exe /DAppVersion=1.0.0 windows\installer\installer.iss` after `flutter build windows --release`.
 
 The installer is not code signed, so Windows SmartScreen warns on first run. Signing needs a certificate, which this template does not assume.
+
+## Bundling a prebuilt binary
+
+`scripts/fetch-xray.sh` is the pattern for shipping a program the app runs as a child process. It is not wired into the workflow, because most apps do not need it. It downloads the [Xray-core](https://github.com/XTLS/Xray-core) release for one target at build time, so the binary never lives in git.
+
+| Target | Where the files go |
+| --- | --- |
+| `android` | `android/app/src/main/jniLibs/<abi>/libxray.so` for arm64-v8a, armeabi-v7a and x86_64, so Android extracts and executes it from the native library folder. `geoip.dat` and `geosite.dat` go to `assets/xray/linux/` |
+| `linux-64`, `linux-arm64` | `assets/xray/linux/xray`, `geoip.dat`, `geosite.dat` |
+| `windows-64`, `windows-arm64` | `assets/xray/windows/xray.exe`, with the geo files shared with Linux |
+
+`XRAY_VERSION` pins a release tag. The default is `latest`. The script leaves empty placeholder files for the other platforms, because `pubspec.yaml` lists the assets of every platform and Flutter fails on a missing one.
+
+To use it in an app:
+
+1. List `assets/xray/linux/` and `assets/xray/windows/` in `pubspec.yaml`, and add `assets/xray/` to `.gitignore`.
+2. Add a `Fetch xray-core` step before each build in `release.yml`: `bash ./scripts/fetch-xray.sh android` in the `android` job, `bash ./scripts/fetch-xray.sh ${{ matrix.xray }}` in the `linux` job with `xray: linux-64` and `xray: linux-arm64` added to the matrix, and `windows-64` in the `windows` job.
+3. Set `EXTRA_REQUIRED_LIBS=libxray.so` for `verify-apk.sh`, and add the file checks for the bundled binary to the `linux` and `windows` jobs.
+
+The same script works for any other program published as zip files: change the repository URL, the asset names and the file names.
 
 ## Checklist for a new app
 
