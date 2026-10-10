@@ -6,6 +6,7 @@ if [[ -z "${APP_NAME:-}" ]]; then
     APP_NAME="$(grep -oP "static const String name = '\K[^']+" "$(dirname "${BASH_SOURCE[0]}")/../lib/app_info.dart")"
     APP_NAME="${APP_NAME// /-}"
 fi
+BUILD_TOOLS_DIR="${BUILD_TOOLS_DIR:-}"
 REQUIRED_LIBS=(libflutter.so libapp.so)
 
 for tool in unzip readelf; do
@@ -37,6 +38,42 @@ for apk in "$APK_OUTPUT_DIR/$APP_NAME"-*.apk; do
     fi
 
     echo "=== $name ==="
+
+    if [[ -n "$BUILD_TOOLS_DIR" ]]; then
+        sig="$("$BUILD_TOOLS_DIR/apksigner" verify --verbose --print-certs "$apk")"
+        grep -E 'Verifies|Verified using|certificate SHA-256' <<<"$sig"
+        for scheme in v1 v2 v3; do
+            if ! grep -qE "Verified using $scheme scheme .*: true" <<<"$sig"; then
+                echo "ERROR: $name is not signed with the $scheme scheme" >&2
+                fail=1
+            fi
+        done
+        cert="$(grep -m1 'certificate SHA-256' <<<"$sig" | awk '{print $NF}')"
+        if [[ -z "${first_cert:-}" ]]; then
+            first_cert="$cert"
+        elif [[ "$cert" != "$first_cert" ]]; then
+            echo "ERROR: $name is signed with a different key than the other APKs" >&2
+            fail=1
+        fi
+        badging="$("$BUILD_TOOLS_DIR/aapt2" dump badging "$apk" 2>/dev/null || true)"
+        grep -E "^(package:|sdkVersion|minSdkVersion|targetSdkVersion|native-code)" <<<"$badging" || true
+        code="$(grep -oP "versionCode='\K[0-9]+" <<<"$badging" | head -1)"
+        echo "versionCode $code"
+        if [[ -z "${first_code:-}" ]]; then
+            first_code="$code"
+        elif [[ "$code" != "$first_code" ]]; then
+            echo "ERROR: $name has versionCode $code, others have $first_code" >&2
+            fail=1
+        fi
+        if grep -qE "application-debuggable|testOnly" <<<"$badging"; then
+            echo "ERROR: $name is a debuggable/test-only build" >&2
+            fail=1
+        fi
+        if ! "$BUILD_TOOLS_DIR/zipalign" -c -P 16 4 "$apk"; then
+            echo "ERROR: $name is not zip-aligned" >&2
+            fail=1
+        fi
+    fi
     listing="$(unzip -Z1 "$apk")"
     grep -E '^lib/.+[^/]$' <<<"$listing" | sort || true
 
