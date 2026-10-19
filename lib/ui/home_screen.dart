@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart' hide Text, Icon;
 import 'package:{{projectName}}/app_info.dart';
 import 'package:{{projectName}}/localization/localization.dart';
-import 'package:{{projectName}}/platform/app_icon.dart';
 import 'package:{{projectName}}/theme/app_spacing.dart';
+import 'package:{{projectName}}/ui/widgets/app_logo.dart';
 import 'package:{{projectName}}/ui/widgets/page_frame.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -20,14 +20,7 @@ class HomeScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             spacing: AppSpacing.md,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadius.card),
-                child: Image.asset(
-                  AppIcon.logo(theme.brightness),
-                  width: _logoSize,
-                  height: _logoSize,
-                ),
-              ),
+              const AppLogo(size: _logoSize),
               Text(AppInfo.name, style: theme.textTheme.headlineSmall),
               Text(
                 'Replace this screen with your app.',

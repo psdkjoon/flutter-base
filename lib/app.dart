@@ -18,10 +18,10 @@ class {{projectNameUpperCamelCase}}App extends StatelessWidget {
       listenable: settings,
       builder: (context, _) {
         return MaterialApp(
-          title: AppInfo.name,
+          onGenerateTitle: (_) => AppInfo.name.tr,
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
+          theme: AppTheme.light(settings.accent),
+          darkTheme: AppTheme.dark(settings.accent),
           themeMode: settings.themeMode,
           scrollBehavior: const _NoScrollbarBehavior(),
           locale: L10n.locale,

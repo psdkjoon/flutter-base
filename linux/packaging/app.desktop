@@ -1,6 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name={{titleCaseProjectName}}
+Name[fa]={{titleCaseProjectName}}
+Name[ja]={{titleCaseProjectName}}
+Name[ru]={{titleCaseProjectName}}
 Comment={{description}}
 Exec={{projectName}}
 Icon={{linuxIdentifier}}

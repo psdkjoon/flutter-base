@@ -8,12 +8,13 @@ const _glyphs = {
   'en': 'Aa',
   'fa': 'ف',
   'ru': 'Я',
-  'id': 'Id',
+  'ja': 'あ',
 };
 
 const _families = {
   'fa': 'NotoSansArabic',
   'ru': 'NotoSans',
+  'ja': 'NotoSansJP',
 };
 
 Future<String?> showLanguageSheet(BuildContext context, String current) {

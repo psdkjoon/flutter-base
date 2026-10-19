@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart' hide Text, Icon;
 import 'package:{{projectName}}/localization/localization.dart';
 import 'package:{{projectName}}/settings/app_settings.dart';
 import 'package:{{projectName}}/theme/app_spacing.dart';
+import 'package:{{projectName}}/theme/catppuccin.dart';
+import 'package:{{projectName}}/ui/about_section.dart';
 import 'package:{{projectName}}/ui/language_sheet.dart';
 import 'package:{{projectName}}/ui/widgets/page_frame.dart';
 import 'package:{{projectName}}/ui/widgets/settings_section.dart';
@@ -50,6 +54,16 @@ class SettingsScreen extends StatelessWidget {
                             settings.themeMode = selection.first,
                       ),
                     ),
+                    _AccentTile(settings: settings),
+                    if (Platform.isAndroid)
+                      SwitchListTile(
+                        title: const Text('Sync theme'),
+                        subtitle: const Text(
+                          'Use the same accent and theme in my other apps on this phone',
+                        ),
+                        value: settings.syncAppearance,
+                        onChanged: (value) => settings.syncAppearance = value,
+                      ),
                   ],
                 ),
                 if (L10n.languages.length > 1)
@@ -77,6 +91,7 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                const AboutSection(),
               ],
             ),
           ),
@@ -96,5 +111,89 @@ class SettingsScreen extends StatelessWidget {
   Future<void> _pickLanguage(BuildContext context) async {
     final picked = await showLanguageSheet(context, settings.language);
     if (picked != null) settings.language = picked;
+  }
+}
+
+class _AccentTile extends StatelessWidget {
+  const _AccentTile({required this.settings});
+
+  final AppSettings settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final palette = dark ? CatppuccinPalette.mocha : CatppuccinPalette.latte;
+    return ListTile(
+      leading: const Icon(Icons.color_lens_outlined),
+      title: const Text('Accent color'),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.sm),
+        child: Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (final name in CatppuccinPalette.accents)
+              _AccentDot(
+                label: '${name[0].toUpperCase()}${name.substring(1)}'.tr,
+                color: palette.accent(name),
+                selected: settings.accent == name,
+                onTap: () => settings.accent = name,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AccentDot extends StatelessWidget {
+  const _AccentDot({
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    const duration = Duration(milliseconds: 200);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: duration,
+          curve: Curves.easeOut,
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected ? scheme.onSurface : Colors.transparent,
+              width: 2.5,
+            ),
+          ),
+          child: AnimatedScale(
+            scale: selected ? 1 : 0,
+            duration: duration,
+            curve: Curves.easeOutBack,
+            child: Icon(
+              Icons.check_rounded,
+              size: 18,
+              color: scheme.surface,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

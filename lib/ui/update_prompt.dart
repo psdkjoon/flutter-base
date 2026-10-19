@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart' hide Text, Icon;
 import 'package:{{projectName}}/app_info.dart';
 import 'package:{{projectName}}/core/update_checker.dart';
+import 'package:{{projectName}}/core/update_installer.dart';
 import 'package:{{projectName}}/localization/localization.dart';
 import 'package:{{projectName}}/platform/system_service.dart';
 import 'package:{{projectName}}/settings/app_settings.dart';
@@ -18,7 +20,11 @@ abstract class UpdatePrompt {
 
   static Future<void> _check(BuildContext context) async {
     final info = await UpdateChecker.check();
-    if (info == null || !context.mounted) return;
+    if (info == null) {
+      if (Platform.isAndroid) unawaited(UpdateDownload.cleanup());
+      return;
+    }
+    if (!context.mounted) return;
     final download = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -37,10 +43,105 @@ abstract class UpdatePrompt {
       ),
     );
     if (download != true) return;
+    if (!context.mounted) return;
+    if (Platform.isAndroid && info.url.toLowerCase().endsWith('.apk')) {
+      await _downloadAndInstall(context, info);
+    } else {
+      await _openInBrowser(info.url);
+    }
+  }
+
+  static Future<void> _openInBrowser(String url) async {
     try {
-      await SystemService.openUrl(info.url);
+      await SystemService.openUrl(url);
     } on Object {
       return;
+    }
+  }
+
+  static Future<void> _downloadAndInstall(
+    BuildContext context,
+    UpdateInfo info,
+  ) async {
+    final progress = ValueNotifier<double?>(null);
+    final download = UpdateDownload();
+    var dialogOpen = true;
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            title: const Text('Downloading update…'),
+            content: ValueListenableBuilder<double?>(
+              valueListenable: progress,
+              builder: (_, value, _) => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(value: value),
+                  if (value != null) ...[
+                    const SizedBox(height: 8),
+                    Text('${(value * 100).round()}%'),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  download.cancel();
+                  Navigator.of(dialogContext).pop();
+                },
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ),
+      ).then((_) => dialogOpen = false),
+    );
+
+    String? path;
+    var failed = false;
+    try {
+      path = await download.run(
+        info.url,
+        onProgress: (v) => progress.value = v,
+      );
+    } on UpdateCancelled {
+      return;
+    } on Object {
+      failed = true;
+    } finally {
+      if (dialogOpen && context.mounted) Navigator.of(context).pop();
+    }
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (failed || path == null) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text("Couldn't download the update. Opening your browser instead."),
+        ),
+      );
+      await _openInBrowser(info.url);
+      return;
+    }
+    try {
+      final opened = await SystemService.installApk(path);
+      if (!opened) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Allow ${AppInfo.name} to install apps, then come back to continue.',
+            ),
+            duration: Duration(seconds: 6),
+          ),
+        );
+      }
+    } on Object {
+      await _openInBrowser(info.url);
     }
   }
 }

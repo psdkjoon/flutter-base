@@ -5,4 +5,24 @@
     <string name="tile_off">Off</string>
     <string name="tile_busy">Working…</string>
     <string name="tile_on">On</string>
+    <string name="reminder_channel">Reminders</string>
+    <string name="service_channel">Background activity</string>
+    <string name="service_running">Running in the background</string>
+    <string name="service_stop">Stop</string>
+    <string name="copied">Copied</string>
+    <string name="share">Share</string>
+    <string name="saved_to_downloads">Saved to Downloads</string>
+    <string name="biometric_title">Unlock</string>
+    <string name="biometric_cancel">Cancel</string>
+    <string name="widget_description">Shortcut to the app on your home screen</string>
+    <string name="widget_open">Tap to open</string>
+    <string name="playback_channel">Background playback</string>
+    <string name="playback_playing">Playing</string>
+    <string name="playback_paused">Paused</string>
+    <string name="playback_pause">Pause</string>
+    <string name="playback_play">Play</string>
+    <string name="playback_next">Next</string>
+    <string name="playback_previous">Previous</string>
+    <string name="playback_shuffle">Shuffle</string>
+    <string name="playback_repeat">Repeat</string>
 </resources>

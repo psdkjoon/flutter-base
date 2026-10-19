@@ -35,6 +35,14 @@ abstract class SystemService {
     }
   }
 
+  /// Hands a downloaded APK to Android's installer. Returns `true` when the
+  /// install screen was opened, `false` when the user first has to allow
+  /// installs from this app (the install continues once they come back).
+  static Future<bool> installApk(String path) async {
+    final status = await _channel.invokeMethod<String>('installApk', {'path': path});
+    return status == 'installing';
+  }
+
   static Future<void> notify(String title, String body) async {
     if (!Platform.isAndroid && !Platform.isLinux) return;
     try {
@@ -48,6 +56,18 @@ abstract class SystemService {
     if (!Platform.isAndroid) return;
     try {
       await _channel.invokeMethod<void>('requestNotifications');
+    } on PlatformException {
+      return;
+    }
+  }
+
+  /// Asks Android to stop battery optimization from killing the app in the
+  /// background, and for the exact-alarm permission on Android 12+. Needed by
+  /// any app with a foreground service, reminders or scheduled work.
+  static Future<void> requestBackgroundAccess() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod<void>('requestBackgroundAccess');
     } on PlatformException {
       return;
     }

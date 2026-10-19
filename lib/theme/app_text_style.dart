@@ -5,11 +5,13 @@ abstract class AppTextStyle {
   static const List<String> fontFallback = [
     'NotoSans',
     'NotoSansArabic',
+    'NotoSansJP',
   ];
 
   static String get fontFamily => switch (L10n.code) {
         'fa' => 'NotoSansArabic',
         'ru' => 'NotoSans',
+        'ja' => 'NotoSansJP',
         _ => 'SpaceGrotesk',
       };
 
