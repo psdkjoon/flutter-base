@@ -77,6 +77,7 @@ New sections go between Language and Updates. Inside Appearance the order is the
 
 ## Dependencies and checks
 
+- There is not a single comment on any of the `dart`, `windows building`, `linux building` and `android building` files
 - `pubspec.yaml` has no `dev_dependencies`: no `flutter_test`, no `flutter_lints`.
 - `analysis_options.yaml` does not `include:` `flutter_lints`.
 - Do not add a `test/` folder, and do not add test steps to CI.
